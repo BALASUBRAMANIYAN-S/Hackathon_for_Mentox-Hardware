@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Industrial Network Monitor</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: #0b1017;
+      color: #e2e8f0;
+      padding: 16px;
+      line-height: 1.4;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #1e293b;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      color: #f8fafc;
+    }
+    .badge-live {
+      font-size: 0.75rem;
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: #0f291e;
+      color: #34d399;
+      border: 1px solid #059669;
+      font-weight: 600;
+    }
+
+    /* Subnet Warning Banner */
+    .banner-warning {
+      background: #2b1d07;
+      border: 1px solid #d97706;
+      color: #fef3c7;
+      padding: 12px 14px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .banner-warning strong {
+      color: #fbbf24;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    /* Cards Grid */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .card {
+      background: #131b26;
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      padding: 14px;
+    }
+    .card-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #94a3b8;
+      margin-bottom: 8px;
+    }
+    .card-value {
+      font-size: 1.2rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .card-sub {
+      font-size: 0.8rem;
+      color: #64748b;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    /* Status Indicators */
+    .indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .status-online {
+      color: #34d399;
+    }
+    .status-online .indicator {
+      background-color: #10b981;
+      box-shadow: 0 0 8px #10b981;
+    }
+    .status-offline {
+      color: #f87171;
+    }
+    .status-offline .indicator {
+      background-color: #ef4444;
+      box-shadow: 0 0 8px #ef4444;
+    }
+    .status-alert {
+      color: #fbbf24;
+    }
+    .status-alert .indicator {
+      background-color: #f59e0b;
+      box-shadow: 0 0 8px #f59e0b;
+    }
+    .status-idle {
+      color: #94a3b8;
+    }
+    .status-idle .indicator {
+      background-color: #64748b;
+    }
+
+    /* Buttons */
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .btn {
+      flex: 1;
+      background: #1e293b;
+      color: #f1f5f9;
+      border: 1px solid #334155;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.15s;
+    }
+    .btn:hover {
+      background: #334155;
+    }
+    .btn-danger {
+      background: #7f1d1d;
+      border-color: #991b1b;
+      color: #fecaca;
+    }
+    .btn-danger:hover {
+      background: #991b1b;
+    }
+    .btn-warning {
+      background: #78350f;
+      border-color: #92400e;
+      color: #fef3c7;
+    }
+    .btn-warning:hover {
+      background: #92400e;
+    }
+    .btn-sm {
+      padding: 3px 8px;
+      font-size: 0.72rem;
+      flex: none;
+    }
+    .btn-muted {
+      background: #252d3a;
+      border-color: #384556;
+      color: #94a3b8;
+    }
+    .btn-muted:hover {
+      background: #334155;
+      color: #f1f5f9;
+    }
+
+    /* Alert Box */
+    .alerts-section {
+      background: #1e1515;
+      border: 1px solid #7f1d1d;
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .alerts-section.active {
+      display: block;
+    }
+    .alerts-header {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #f87171;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .unauth-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 8px;
+      background: #2a1818;
+      border-radius: 4px;
+      margin-bottom: 6px;
+      font-size: 0.82rem;
+      font-family: monospace;
+    }
+
+    /* Tables */
+    .section-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #94a3b8;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #131b26;
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 16px;
+      font-size: 0.82rem;
+    }
+    th, td {
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 1px solid #1e293b;
+    }
+    th {
+      background: #0f1620;
+      color: #94a3b8;
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    .pill {
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-weight: 600;
+    }
+    .pill-green {
+      background: #064e3b;
+      color: #6ee7b7;
+    }
+    .pill-red {
+      background: #7f1d1d;
+      color: #fca5a5;
+    }
+    .pill-gray {
+      background: #1e293b;
+      color: #94a3b8;
+    }
+
+    /* Event Log */
+    .event-log {
+      max-height: 180px;
+      overflow-y: auto;
+      background: #131b26;
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-family: monospace;
+      font-size: 0.78rem;
+    }
+    .event-row {
+      padding: 4px 0;
+      border-bottom: 1px solid #1a222e;
+      display: flex;
+      gap: 10px;
+    }
+    .event-row:last-child {
+      border-bottom: none;
+    }
+    .event-time {
+      color: #64748b;
+      white-space: nowrap;
+    }
+    .event-msg-critical {
+      color: #f87171;
+    }
+    .event-msg-warning {
+      color: #fbbf24;
+    }
+    .event-msg-info {
+      color: #cbd5e1;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>Industrial Network Monitor</h1>
+      </div>
+      <div>
+        <span class="badge-live">LIVE MONITORING (Fast 5s Detection)</span>
+      </div>
+    </header>
+
+    <!-- Subnet Mismatch Alert Banner -->
+    <div id="subnetBanner" class="banner-warning">
+      <strong>⚠️ Network Configuration Notice</strong>
+      <span id="subnetDiagnostic">Checking IP compatibility...</span>
+    </div>
+
+    <!-- Active Unauthorized Device Alert Banner -->
+    <div id="alertBox" class="alerts-section">
+      <div class="alerts-header">
+        <span>🚨 NEW DEVICE DETECTED ON NETWORK!</span>
+        <button class="btn btn-warning btn-sm" onclick="silenceBuzzer()">Silence Relay / Buzzer</button>
+      </div>
+      <div id="unauthList"></div>
+    </div>
+
+    <!-- Main Status Cards -->
+    <div class="grid">
+      <!-- Raspberry Pi Card -->
+      <div class="card">
+        <div class="card-title">Raspberry Pi 3 Host</div>
+        <div class="card-value status-online">
+          <span class="indicator"></span>
+          <span id="piStatus">Online</span>
+        </div>
+        <div class="card-sub">IP: <span id="piIp">{{ pi_ip }}</span></div>
+      </div>
+
+      <!-- Siemens PLC Card -->
+      <div class="card">
+        <div class="card-title">Siemens LOGO! 8.3 PLC</div>
+        <div class="card-value status-offline" id="plcStatusVal">
+          <span class="indicator"></span>
+          <span id="plcStatus">Offline</span>
+        </div>
+        <div class="card-sub">IP: <span id="plcIp">{{ plc_ip }}</span></div>
+        <div class="card-sub" style="margin-top:4px; font-size:0.72rem;">Last check: <span id="plcLastCheck">-</span></div>
+      </div>
+
+      <!-- Relay / Buzzer Card -->
+      <div class="card">
+        <div class="card-title">Relay / Buzzer (GPIO 17)</div>
+        <div class="card-value status-idle" id="buzzerStatusVal">
+          <span class="indicator"></span>
+          <span id="buzzerStatus">Idle (OFF)</span>
+        </div>
+        <div class="card-sub" style="margin-bottom:6px; font-size:0.75rem;">
+          Mode: <span id="buzzerModeText" style="color:#94a3b8;">Active-HIGH</span>
+        </div>
+        <div class="btn-group">
+          <button class="btn" id="btnTestRelay" onclick="testBuzzer()">Test Relay</button>
+          <button class="btn btn-warning" onclick="silenceBuzzer()">Silence</button>
+          <button class="btn btn-muted btn-sm" onclick="toggleRelayMode()" title="Flip between Active-HIGH (0V=OFF) and Active-LOW (3.3V=OFF)">Invert</button>
+        </div>
+      </div>
+
+      <!-- Network Discovery Card -->
+      <div class="card">
+        <div class="card-title">Network Discovery</div>
+        <div class="card-value" style="font-size: 1.05rem; color: #38bdf8;">
+          <span id="deviceCount">0</span> Devices Online
+        </div>
+        <div class="card-sub">Subnets: <span id="subnetsScanned" style="color:#cbd5e1;">-</span></div>
+        <div class="card-sub" style="font-size:0.72rem;">Scan: <span id="scanEngineText" style="color:#a7f3d0;">Active</span></div>
+        <div class="card-sub" style="font-size:0.72rem;">Last scan: <span id="lastScanTime">Never</span></div>
+        <div class="btn-group">
+          <button class="btn" id="btnScanNow" onclick="scanNow()">Scan Now</button>
+          <button class="btn btn-danger" style="font-size:0.72rem;" onclick="simulateUnknown()" title="Simulate a new rogue device to test alarm">Simulate Alert</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Discovered Devices Section -->
+    <div class="section-title">
+      <span>Discovered Devices on Network</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>IP Address</th>
+          <th>MAC Address</th>
+          <th>Device Name</th>
+          <th>Connection</th>
+          <th>Authorization</th>
+          <th>Last Seen</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="devicesTableBody">
+        <tr>
+          <td colspan="7" style="text-align:center; color:#64748b;">Loading devices...</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Network Events Log -->
+    <div class="section-title">
+      <span>Recent Network Events</span>
+    </div>
+    <div class="event-log" id="eventsLog">
+      <div style="color:#64748b;">Waiting for events...</div>
+    </div>
+  </div>
+
+  <script>
+    // Fetch system status and update DOM
+    async function updateDashboard() {
+      try {
+        const res = await fetch("/api/status");
+        if (!res.ok) return;
+        const data = await res.json();
+
+        // 1. Subnet Compatibility Banner
+        const banner = document.getElementById("subnetBanner");
+        if (data.network_compat && !data.network_compat.same_subnet) {
+          banner.style.display = "block";
+          document.getElementById("subnetDiagnostic").textContent = data.network_compat.diagnostic;
+        } else {
+          banner.style.display = "none";
+        }
+
+        // 2. Raspberry Pi Status
+        document.getElementById("piIp").textContent = data.pi.ip;
+        document.getElementById("piStatus").textContent = data.pi.status;
+
+        // 3. Siemens PLC Status
+        const plcStatusElem = document.getElementById("plcStatus");
+        const plcStatusVal = document.getElementById("plcStatusVal");
+        document.getElementById("plcIp").textContent = data.plc.ip;
+        document.getElementById("plcLastCheck").textContent = data.plc.last_checked || "Never";
+
+        if (data.plc.online) {
+          plcStatusElem.textContent = "Online";
+          plcStatusVal.className = "card-value status-online";
+        } else {
+          plcStatusElem.textContent = "Offline";
+          plcStatusVal.className = "card-value status-offline";
+        }
+
+        // 4. Relay / Buzzer Status & Mode
+        const bzVal = document.getElementById("buzzerStatusVal");
+        const bzText = document.getElementById("buzzerStatus");
+        const bzMode = document.getElementById("buzzerModeText");
+        
+        if (data.buzzer && data.buzzer.mode_text) {
+          bzMode.textContent = data.buzzer.mode_text;
+        }
+
+        if (data.buzzer.status === "Beeping") {
+          bzVal.className = "card-value status-offline";
+          bzText.textContent = "ALARM (ON)";
+        } else if (data.buzzer.status === "Silenced") {
+          bzVal.className = "card-value status-alert";
+          bzText.textContent = "Silenced (OFF)";
+        } else if (data.buzzer.status === "Test Active") {
+          bzVal.className = "card-value status-online";
+          bzText.textContent = "Testing (ON)";
+        } else {
+          bzVal.className = "card-value status-idle";
+          bzText.textContent = "Idle (OFF)";
+        }
+
+        // 5. Scan Time & Devices Count
+        document.getElementById("lastScanTime").textContent = data.last_scan || "Never";
+        const onlineCount = data.devices ? data.devices.filter(d => d.status === 'online').length : 0;
+        document.getElementById("deviceCount").textContent = onlineCount;
+
+        if (data.subnets_scanned && data.subnets_scanned.length > 0) {
+          document.getElementById("subnetsScanned").textContent = data.subnets_scanned.join(", ");
+        }
+        if (data.scan_engine) {
+          document.getElementById("scanEngineText").textContent = data.scan_engine;
+        }
+
+        // 6. Active Unauthorized Device Alerts (Only for currently online devices)
+        const alertBox = document.getElementById("alertBox");
+        const unauthList = document.getElementById("unauthList");
+        if (data.unauthorized && data.unauthorized.length > 0) {
+          alertBox.className = "alerts-section active";
+          unauthList.innerHTML = data.unauthorized.map(dev => `
+            <div class="unauth-item">
+              <span>⚠️ ${dev.ip} (${dev.mac}) - ${dev.name} [ONLINE NOW]</span>
+              <button class="btn btn-sm" onclick="authorizeDevice('${dev.ip}')">Authorize</button>
+            </div>
+          `).join("");
+        } else {
+          alertBox.className = "alerts-section";
+          unauthList.innerHTML = "";
+        }
+
+        // 7. Devices Table
+        const tbody = document.getElementById("devicesTableBody");
+        if (data.devices && data.devices.length > 0) {
+          tbody.innerHTML = data.devices.map(dev => {
+            const isOnline = dev.status === "online";
+            const isAuth = dev.authorized;
+            const isFixed = (dev.ip === data.pi.ip || dev.ip === data.plc.ip);
+
+            let actionHtml = '-';
+            if (!isAuth && isOnline) {
+              actionHtml = `<button class="btn btn-sm" onclick="authorizeDevice('${dev.ip}')">Authorize</button>`;
+            } else if (!isOnline && !isFixed) {
+              actionHtml = `<button class="btn btn-sm btn-muted" onclick="deleteDevice('${dev.ip}')" title="Remove disconnected device">Remove</button>`;
+            }
+
+            return `
+              <tr>
+                <td class="mono">${dev.ip}</td>
+                <td class="mono">${dev.mac}</td>
+                <td>${dev.name}</td>
+                <td><span class="pill ${isOnline ? 'pill-green' : 'pill-red'}">${isOnline ? 'Online' : 'Offline'}</span></td>
+                <td><span class="pill ${isAuth ? 'pill-green' : 'pill-red'}">${isAuth ? 'Authorized' : 'Unauthorized'}</span></td>
+                <td class="mono" style="font-size:0.75rem;">${dev.last_seen}</td>
+                <td>${actionHtml}</td>
+              </tr>
+            `;
+          }).join("");
+        }
+
+        // 8. Event Log
+        const logBox = document.getElementById("eventsLog");
+        if (data.events && data.events.length > 0) {
+          logBox.innerHTML = data.events.slice(0, 15).map(evt => {
+            let colorClass = "event-msg-info";
+            if (evt.severity === "critical") colorClass = "event-msg-critical";
+            if (evt.severity === "warning") colorClass = "event-msg-warning";
+            return `
+              <div class="event-row">
+                <span class="event-time">${evt.timestamp}</span>
+                <span class="${colorClass}">[${evt.event_type}] ${evt.message}</span>
+              </div>
+            `;
+          }).join("");
+        }
+      } catch (err) {
+        console.error("Dashboard update error:", err);
+      }
+    }
+
+    // Button Actions
+    async function testBuzzer() {
+      const btn = document.getElementById("btnTestRelay");
+      if (btn) btn.textContent = "Testing (2s)...";
+      await fetch("/api/buzzer/test", { method: "POST" });
+      updateDashboard();
+      setTimeout(() => {
+        if (btn) btn.textContent = "Test Relay";
+        updateDashboard();
+      }, 2100);
+    }
+
+    async function silenceBuzzer() {
+      await fetch("/api/buzzer/silence", { method: "POST" });
+      updateDashboard();
+    }
+
+    async function toggleRelayMode() {
+      const res = await fetch("/api/buzzer/toggle_mode", { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        alert("Relay Polarity Switched to: " + data.mode_text);
+        updateDashboard();
+      }
+    }
+
+    async function scanNow() {
+      const btn = document.getElementById("btnScanNow");
+      if (btn) btn.textContent = "Scanning...";
+      try {
+        await fetch("/api/scan", { method: "POST" });
+        updateDashboard();
+      } finally {
+        if (btn) btn.textContent = "Scan Now";
+      }
+    }
+
+    async function authorizeDevice(ip) {
+      await fetch("/api/authorize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ip })
+      });
+      updateDashboard();
+    }
+
+    async function deleteDevice(ip) {
+      await fetch("/api/device/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ip })
+      });
+      updateDashboard();
+    }
+
+    async function simulateUnknown() {
+      await fetch("/api/simulate/unknown", { method: "POST" });
+      updateDashboard();
+    }
+
+    // Auto-refresh automatically every 2.5 seconds for instant detection updates
+    setInterval(updateDashboard, 2500);
+    updateDashboard();
+  </script>
+</body>
+</html>
