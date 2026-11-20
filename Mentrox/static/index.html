@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetSentinel OT | Industrial Network Security & Switch Discovery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <div class="brand">
+      <div class="brand-info">
+        <div class="brand-title-row">
+          <h1>NetSentinel OT</h1>
+          <span class="ot-badge">ICS / OT SECURE</span>
+          <span class="isolation-badge">ETHERNET ISOLATED</span>
+        </div>
+        <p id="net-subnet-text">OT Interface: Ethernet [Index 9] | IP: 192.168.0.12 | Subnet: 192.168.0.0/24</p>
+      </div>
+    </div>
+
+    <div class="nav-right">
+      <!-- Interface Connection Pill -->
+      <div class="status-pill" id="iface-pill">
+        <span class="dot dot-green" id="iface-dot"></span>
+        <span id="iface-status-text">Ethernet (Index 9) Connected</span>
+      </div>
+
+      <!-- Windows Firewall Privilege Pill -->
+      <div class="status-pill" id="admin-pill" title="Firewall privilege level">
+        <span class="dot" id="admin-dot"></span>
+        <span id="admin-pill-text">Firewall: Checking...</span>
+      </div>
+
+      <!-- Auto-Scan Countdown Pill -->
+      <div class="status-pill scan-pill" id="scan-pill">
+        <span class="dot dot-pulse" id="scan-pulse-dot"></span>
+        <span id="scan-pill-text">Auto-scan in 10s</span>
+      </div>
+
+      <!-- Theme Switcher (Dark / Light Mode) -->
+      <button class="theme-toggle-btn" id="btn-theme-toggle" title="Switch Theme (Dark / Light Mode)">
+        <span id="theme-icon">Theme: Dark</span>
+      </button>
+
+      <!-- Manual Scan Button -->
+      <button class="btn btn-primary" id="btn-scan" title="Trigger instant conservative OT network scan">
+        <span id="scan-icon" class="scan-indicator"></span>Scan Network
+      </button>
+
+      <!-- Fullscreen Toggle Button -->
+      <button class="btn btn-secondary" id="btn-fullscreen" title="Toggle Fullscreen Mode">
+        Fullscreen
+      </button>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- Disconnected Alert Banner (Hidden by default, shown if Ethernet cable unplugged) -->
+    <div class="alert-box alert-disconnected" id="disconnect-banner" style="display: none;">
+      <div class="alert-header">
+        <div class="alert-title">
+          <span class="alert-badge">⚠️ OT NETWORK OFFLINE</span>
+          <h3 id="disconnect-title">Ethernet (OT Network) Disconnected</h3>
+        </div>
+        <span class="alert-help" id="disconnect-help">Please verify the Ethernet cable is securely connected between
+          your laptop and the 8-channel OT switch, and verify the switch is powered on.</span>
+      </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- SECTION 1: GRAPHICAL DATA & ANIMATIONS (Inspired by modern analytics) -->
+    <!-- ===================================================================== -->
+    <section class="visual-hub-grid">
+
+      <!-- CARD 1: Device Security & Inventory Donut Index -->
+      <div class="glass-card donut-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h3>Device Inventory Index</h3>
+            <span class="card-subtitle">Real-time OT Subnet Distribution</span>
+          </div>
+          <span class="badge badge-subtle" id="donut-sync-badge">Live Synced</span>
+        </div>
+
+        <div class="donut-chart-container">
+          <div class="donut-chart-wrapper">
+            <svg class="donut-svg" viewBox="0 0 160 160">
+              <circle class="donut-bg" cx="80" cy="80" r="62" />
+              <!-- Segments rendered dynamically via app.js -->
+              <circle id="donut-segment-safe" class="donut-seg seg-safe" cx="80" cy="80" r="62" />
+              <circle id="donut-segment-plc" class="donut-seg seg-plc" cx="80" cy="80" r="62" />
+              <circle id="donut-segment-warn" class="donut-seg seg-warn" cx="80" cy="80" r="62" />
+              <circle id="donut-segment-blocked" class="donut-seg seg-blocked" cx="80" cy="80" r="62" />
+            </svg>
+            <div class="donut-center-data">
+              <span class="donut-big-num" id="donut-total-num">0</span>
+              <span class="donut-sub-text">Live Devices</span>
+            </div>
+          </div>
+
+          <!-- Donut Breakdown Badges -->
+          <div class="donut-legend-grid">
+            <div class="legend-pill" id="leg-safe">
+              <span class="legend-dot dot-safe"></span>
+              <span class="legend-label">Whitelisted</span>
+              <strong class="legend-value" id="leg-safe-val">0</strong>
+            </div>
+            <div class="legend-pill" id="leg-plc">
+              <span class="legend-dot dot-plc"></span>
+              <span class="legend-label">Raspberry / PLC</span>
+              <strong class="legend-value" id="leg-plc-val">0</strong>
+            </div>
+            <div class="legend-pill" id="leg-warn">
+              <span class="legend-dot dot-warn"></span>
+              <span class="legend-label">Rogue Strangers</span>
+              <strong class="legend-value" id="leg-warn-val">0</strong>
+            </div>
+            <div class="legend-pill" id="leg-blocked">
+              <span class="legend-dot dot-blocked"></span>
+              <span class="legend-label">Firewall Blocked</span>
+              <strong class="legend-value" id="leg-blocked-val">0</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 2: Physical 8-Port Switch Visualizer -->
+      <div class="glass-card switch-visualizer-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h3>Switch status</h3>
+          </div>
+        </div>
+
+        <div class="switch-chassis">
+          <div class="switch-bezel">
+            <div class="switch-branding">
+              <span class="switch-logo">SWITCH STATUS</span>
+              <span class="switch-power-led" title="Power OK"><span class="led-dot led-green-pulse"></span> PWR</span>
+            </div>
+
+            <!-- 8 RJ45 Ports Layout (Enlarged Size with Dynamic Pulse & Traffic Animations) -->
+            <div class="switch-ports-grid" id="switch-ports-container">
+              <!-- Dynamically populated 8 ports via app.js -->
+            </div>
+          </div>
+          <div class="switch-footer-note">
+            <span class="port-legend-item"><span class="led-dot led-green"></span> Link Active</span>
+            <span class="port-legend-item"><span class="led-dot led-amber-blink"></span> RX/TX Activity</span>
+            <span class="port-legend-item"><span class="led-dot led-red"></span> Blocked</span>
+            <span class="port-legend-item"><span class="led-dot led-grey"></span> Link Down</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 3: Device Latency & Traffic Column Chart (Deal Value style) -->
+      <div class="glass-card barchart-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h3>Device Response & Latency</h3>
+            <span class="card-subtitle">ICMP & Socket Round-Trip (ms)</span>
+          </div>
+          <span class="badge badge-subtle" id="latency-summary-badge">&lt; 2ms Avg</span>
+        </div>
+
+        <div class="barchart-wrapper" id="latency-chart-container">
+          <!-- Dynamically populated animated vertical bars -->
+        </div>
+
+        <div class="barchart-footer">
+          <span>Target OT Subnet: 192.168.0.0/24</span>
+          <span id="scan-rate-info">Sweep Rate: Conservative (15 req/s)</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- SECTION 2: EXECUTIVE KPI METRIC CARDS (Inspired by dark analytics)   -->
+    <!-- ===================================================================== -->
+    <section class="kpi-grid">
+      <!-- KPI 1: Live Devices -->
+      <div class="kpi-card" id="kpi-live">
+        <div class="kpi-top">
+          <div class="kpi-icon-wrap icon-emerald">
+            <span>🟢</span>
+          </div>
+          <span class="kpi-trend trend-positive">↑ 100% Ethernet</span>
+        </div>
+        <div class="kpi-content">
+          <span class="kpi-label">Active OT Devices</span>
+          <h2 class="kpi-value" id="num-online">0</h2>
+          <span class="kpi-sub">Physically on 8-ch switch</span>
+        </div>
+      </div>
+
+      <!-- KPI 2: PLCs & Raspberry Pi -->
+      <div class="kpi-card" id="kpi-plc">
+        <div class="kpi-top">
+          <div class="kpi-icon-wrap icon-cyan">
+            <span>⚙️</span>
+          </div>
+          <span class="kpi-trend trend-neutral">Modbus / Pi</span>
+        </div>
+        <div class="kpi-content">
+          <span class="kpi-label">Raspberry Pi & PLCs</span>
+          <h2 class="kpi-value color-plc" id="num-plc">0</h2>
+          <span class="kpi-sub">Industrial controllers</span>
+        </div>
+      </div>
+
+      <!-- KPI 3: Whitelisted Safe Devices -->
+      <div class="kpi-card" id="kpi-safe">
+        <div class="kpi-top">
+          <div class="kpi-icon-wrap icon-blue">
+            <span>🛡️</span>
+          </div>
+          <span class="kpi-trend trend-positive">✔ Whitelisted</span>
+        </div>
+        <div class="kpi-content">
+          <span class="kpi-label">Trusted Devices</span>
+          <h2 class="kpi-value color-safe" id="num-safe">0</h2>
+          <span class="kpi-sub">Authorized in MySQL</span>
+        </div>
+      </div>
+
+      <!-- KPI 4: Rogue Unknown Strangers -->
+      <div class="kpi-card" id="kpi-warn">
+        <div class="kpi-top">
+          <div class="kpi-icon-wrap icon-amber">
+            <span>⚠️</span>
+          </div>
+          <span class="kpi-trend trend-warn" id="kpi-warn-trend">0 Strangers</span>
+        </div>
+        <div class="kpi-content">
+          <span class="kpi-label">Unauthorized Strangers</span>
+          <h2 class="kpi-value color-danger" id="num-warn">0</h2>
+          <span class="kpi-sub">Unverified OT devices</span>
+        </div>
+      </div>
+
+      <!-- KPI 5: Firewall Blocked Devices -->
+      <div class="kpi-card" id="kpi-blocked">
+        <div class="kpi-top">
+          <div class="kpi-icon-wrap icon-purple">
+            <span>🚫</span>
+          </div>
+          <span class="kpi-trend trend-blocked" id="kpi-blocked-trend">Active Filter</span>
+        </div>
+        <div class="kpi-content">
+          <span class="kpi-label">Firewall Blocked</span>
+          <h2 class="kpi-value color-blocked" id="num-blocked">0</h2>
+          <span class="kpi-sub">Inbound + Outbound dropped</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Red Alert Box: Only shows for LIVE unauthorized devices on OT network -->
+    <div class="alert-box alert-warning-dynamic" id="warning-banner" style="display: none;">
+      <div class="alert-header">
+        <div class="alert-title">
+          <span class="alert-badge pulse-badge">⚠️ OT INTRUSION WARNING</span>
+          <h3>Unauthorized Rogue Device Detected on Physical OT Switch</h3>
+        </div>
+        <span class="alert-help">These devices are responding on the 192.168.0.0/24 OT network but are not whitelisted
+          in MySQL. Click <strong>Whitelist</strong> or <strong>Block</strong>.</span>
+      </div>
+      <div class="alert-cards-grid" id="warning-list"></div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- SECTION 3: INVENTORY TABLE PANEL WITH MODERN CONTROLS                 -->
+    <!-- ===================================================================== -->
+    <div class="glass-card table-panel">
+      <div class="panel-top">
+        <div class="panel-left">
+          <div class="table-title-row">
+            <h2>OT Network Device Inventory</h2>
+            <span class="badge badge-subtle">Subnet 192.168.0.0/24</span>
+          </div>
+          <span class="panel-meta" id="scan-time-meta">Last scan: Just now</span>
+        </div>
+
+        <div class="panel-actions">
+          <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="search-input" placeholder="Search IP, Hostname, MAC, Vendor..." class="search-box">
+          </div>
+
+          <!-- Category Filter Tabs -->
+          <div class="filter-group">
+            <button class="tab-btn active" data-tab="online">🟢 Live OT (<span id="tab-count-online">0</span>)</button>
+            <button class="tab-btn btn-tab-plc" data-tab="plc">⚙️ Pi & PLCs (<span id="tab-count-plc">0</span>)</button>
+            <button class="tab-btn btn-tab-switch" data-tab="switch">🔀 Switches (<span
+                id="tab-count-switch">0</span>)</button>
+            <button class="tab-btn btn-tab-warn" data-tab="warn">⚠️ Rogue (<span id="tab-count-warn">0</span>)</button>
+            <button class="tab-btn" data-tab="safe">✔ Whitelisted (<span id="tab-count-safe">0</span>)</button>
+            <button class="tab-btn" data-tab="blocked">🚫 Blocked (<span id="tab-count-blocked">0</span>)</button>
+            <button class="tab-btn" data-tab="offline">🕒 Past Offline (<span id="tab-count-offline">0</span>)</button>
+          </div>
+
+          <!-- Clear Past Offline History Button -->
+          <button class="btn btn-secondary btn-sm" id="btn-clear-history" title="Clear disconnected historical devices">
+            🗑️ Clear History
+          </button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="simple-table">
+          <thead>
+            <tr>
+              <th>OT IP ADDRESS</th>
+              <th>MAC ADDRESS</th>
+              <th>DEVICE / HOSTNAME</th>
+              <th>OT DEVICE ROLE</th>
+              <th>HARDWARE VENDOR</th>
+              <th>INTERFACE</th>
+              <th>ONLINE STATE</th>
+              <th>WHITELIST</th>
+              <th>FIREWALL</th>
+              <th>ACTION</th>
+            </tr>
+          </thead>
+          <tbody id="devices-tbody">
+            <tr>
+              <td colspan="10" class="empty-cell">Scanning OT Ethernet network...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Quick Manual Whitelist Add (Bottom) -->
+    <div class="glass-card simple-add-panel">
+      <div class="add-header">
+        <div class="add-title-group">
+          <h3>Add a Whitelist Devices</h3>
+        </div>
+      </div>
+
+      <form id="form-quick-add" class="quick-form">
+        <input type="text" id="manual-ip" placeholder="IP Address (e.g. 192.168.0.3 or 192.168.0.50)" required>
+        <input type="text" id="manual-name" placeholder="Device Name (e.g. Raspberry Pi 4, Siemens S7-1200, Switch)">
+        <button type="submit" class="btn btn-safe">➕ Add to OT Whitelist</button>
+      </form>
+    </div>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
